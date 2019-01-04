@@ -1,0 +1,14 @@
+{
+  "name": "pwa-demo",
+  "version": "1.0.0",
+  "description": "demonstrates progressive web app concepts",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve public"
+  },
+  "author": "R. Mark Volkmann <r.mark.volkmann@gmail.com> (https://mvolkmann.github.io/)",
+  "license": "MIT",
+  "dependencies": {
+    "serve": "^10.1.1"
+  }
+}
