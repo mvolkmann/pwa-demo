@@ -141,21 +141,40 @@ The `sync` event is emitted when ...
 
 The `push` event is emitted when ...
 
+## Service Worker Implementation
+
+The code for a service worker can be placed in a JavaScript source file with any name.
+If the name is `service-worker.js`, the web application
+can register it with the following code:
+
+```js
+const registration = await navigator.serviceWorker.register(
+  '/service-worker.js'
+);
+```
+
 A service worker only has access to files in the
 same directory and in descendant directories.
-For this reason, the JavaScript file that defines it is
-typically placed at the top of the "public" directory.
+For this reason, its source file is typically
+placed at the top of the `public` directory.
 
-To allow the service worker code to be updated on a refresh:
+## Service Worker Support in Chrome Devtools
 
-- open devtools
+Chrome developer tools (devtools) are accessed from a menu
+by selecting View ... Developer ... Developer Tools
+or pressing the equivalent keyboard shortcut.
+The following sections assume that the web app is running
+in the current browser window and the devtools are open.
+
+To allow the service worker code to be updated
+by a browser refresh:
+
 - click "Application" tab
 - click "Service Workers" in left nav
 - check "Update on reload"
 
 To see the service worker code being used:
 
-- open devtools
 - click "Application" tab
 - click "Service Workers" in left nav
 - scroll to the first service worker with a status of "active and is running"
@@ -163,20 +182,17 @@ To see the service worker code being used:
 
 To allow service worker to get fetch events:
 
-- open devtools
 - click "Application" tab
 - uncheck "Bypass for network"!
 
 To clear what service worker has cached:
 
-- open devtools
 - click "Application" tab
 - click "Clear storage" in left nav
 - click "Clear site date" button at bottom
 
 To reload service-worker.js:
 
-- open devtools
 - click "Application" tab
 - click "Service Workers" in left nav
 - click "Unregister" link to right of the service worker
