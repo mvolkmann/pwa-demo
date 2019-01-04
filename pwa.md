@@ -158,6 +158,22 @@ same directory and in descendant directories.
 For this reason, its source file is typically
 placed at the top of the `public` directory.
 
+## Caching Files
+
+To cause the service worker to cache all the files
+that are required in order to run in offline mode,
+add the following in its source file:
+
+```js
+const cacheName = 'some-name';
+const filesToCache = ['/file-path-1', '/file-path-2', ...];
+
+self.addEventListener('install', async event => {
+  const cache = await caches.open(cacheName);
+  event.waitUntil(cache.addAll(filesToCache));
+});
+```
+
 ## Service Worker Support in Chrome Devtools
 
 Chrome developer tools (devtools) are accessed from a menu
@@ -180,25 +196,48 @@ To see the service worker code being used:
 - scroll to the first service worker with a status of "active and is running"
 - click the link after "Source"
 
-To allow service worker to get fetch events:
+To allow service worker to receive fetch events:
 
 - click "Application" tab
-- uncheck "Bypass for network"!
+- verify that the "Bypass for network" checkbox is unchecked
 
-To clear what service worker has cached:
+To see a list of all the cached files:
+
+- click "Application" tab
+- click the "Cache Storage" disclosure triangle in left nav
+- click the cache name
+
+To see the content of a cached file
+displayed by the steps above:
+
+- click its name
+
+To clear all the files that the service worker has cached:
 
 - click "Application" tab
 - click "Clear storage" in left nav
-- click "Clear site date" button at bottom
+- verify that the "Cache storage" checkbox is checked,
+  and consider checking all the checkboxes
+- click "Clear site data" button at bottom
 
-To reload service-worker.js:
+Files cached by a service worker will be used even if the
+devtools "Disable cache" checkbox on the "Network" tab
+is checked.
+
+In order to repeatedly test the process of registering a service worker,
+it is useful to unregister the current service worker.
+
+To unregister a service worker and register it again:
 
 - click "Application" tab
 - click "Service Workers" in left nav
 - click "Unregister" link to right of the service worker
 - refresh browser window
 
-To clear out list of unregistered service workers,
+After a service worker has been unregistered in the devtools,
+it still appears in the list of service workers,
+but has a status of "activated and is stopped".
+The only way to make these disappear from the list is to
 close the browser tab, open a new one, and browse the site again.
 
 It seems that fetch events are only generated for resources
@@ -208,32 +247,6 @@ and a 404 will be returned.
 The service worker can respond with different content,
 but only if there was some original content
 and only on requests after the first (refresh page).
-
-To cache files:
-
-```js
-const cacheName = 'some-name';
-const filesToCache = [...];
-
-self.addEventListener('install', async event => {
-  const cache = await caches.open(cacheName);
-  event.waitUntil(cache.addAll(filesToCache));
-});
-```
-
-Do you need to uncheck "Disable cache" in the devtools
-"Network" tab for these cached files to be used?
-
-To see the cached files:
-
-- open devtools
-- click "Application" tab
-- click the "Cache Storage" disclosure triangle in left nav
-- click the cache name
-
-To see the content of a cached file:
-
-- click its name
 
 To simulate being offline, open the devtools and
 check the "Offline" checkbox on either the
