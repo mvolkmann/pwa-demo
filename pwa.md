@@ -97,6 +97,169 @@ when the browser is refreshed. To enable this in Chrome,
 open the devtools, click the "Application" tab,
 and check the "Update on reload" checkbox.
 
+## Service Worker Activation
+
+A web application can register a service worker
+to manage all URLs in the same scope.
+This can be done in any JavaScript file
+that is executed when the app starts.
+
+```js
+const registration = await navigator.serviceWorker.register(
+  '/service-worker.js'
+);
+```
+
+This triggers an `activate` event in the service worker.
+The handler for this event should set the active service worker
+identified by `self` to be controller for all clients in its scope.
+
+```js
+self.addEventListener('activate', event => {
+  // Code shown next goes here.
+  return self.clients.claim();
+});
+```
+
+For service workers that use a single cache, it is common
+to change its name whenever its contents need to change.
+This can be done by appending a version number to its name.
+When the name changes, clients should delete any old cache versions
+to save space. The following code, placed inside the function
+that handles the `activation` event, does this:
+
+```js
+const deleteOldCaches = async () => {
+  const keyList = await caches.keys();
+  return Promise.all(
+    keyList.map(key => (key !== cacheName ? caches.delete(key) : null))
+  );
+};
+event.waitUntil(deleteOldCaches());
+```
+
+If the PWA needs to cache any files,
+this should be done in the event handler for the `install` event.
+There are two motivations for doing this.
+The first is that the files will be available when offline.
+The second is that cached files can be used even when online
+to help a PWA to launch faster.
+The following code caches files:
+
+```js
+const filesToCache = [
+  '/', // need in order to hit web app with domain only
+  '/demo.css',
+  '/index.html',
+  '/demo.js',
+  '/images/avatar.jpg'
+];
+
+self.addEventListener('install', event => {
+  const cacheAll = async () => {
+    const cache = await caches.open(cacheName);
+    await cache.addAll(filesToCache);
+  };
+  event.waitUntil(cacheAll());
+});
+```
+
+## Where To Store Data
+
+For resources that have a URL, use the Service Worker Cache API.
+For all other data, use the browser database IndexedDB API.
+
+## Storage Limits
+
+Storage limits for progressive web apps vary by browser.
+
+Progressive web apps can use multiple storage APIs.
+
+The Service Workers W3C Working Draft defines the Cache and CacheStorage APIs.
+Each origin can create amd use multiple `Cache` objects
+that are not shared across origin.
+These are separate from the the browser's HTTP cache.
+They are only updated through API calls.
+They never expire and must be manually deleted when no longer needed.
+
+To create a new `Cache` object in the current origin
+inside an `async` function:
+
+```js
+const cache = await caches.open(cacheName);
+```
+
+To add or replace files to a `Cache` object,
+use the `add` and `addAll` methods.
+The `add` method takes a single URL path.
+The `addAll` method takes an array of URL paths.
+For example:
+
+```js
+await cache.addAll(filesToCache);
+```
+
+To retrieve a list of data keys in a `Cache` object, use the `keys` method.
+Inside an async function this is done as follows:
+
+```js
+const keyList = await caches.keys();
+```
+
+To retrieve values for given `Cache` object keys,
+use the `match` and `matchAll` methods.
+The following code uses a cache-first strategy
+to respond to `fetch` events.
+If the request can be satisfied by the cache, it is.
+Otherwise the Fetch API is used to fetch it over the network.
+
+```js
+self.addEventListener('fetch', event => {
+  const {request} = event;
+  const getResource = () => caches.match(request) || fetch(request);
+  event.respondWith(getResource());
+});
+```
+
+To retrieve the value for a given key in a `Cache` object, use the `?` method.
+
+To delete a `Cache` object, use the `delete` method.
+
+ADD DETAILS ON THE CacheStorage API!
+
+The Indexed Database W3C Recommendation defines the Indexed Database API.
+It is currently implemented in Chrome, Firefox, and Safari.
+There is partial support in IE and Edge.
+
+Note that there is an IndexedDB 2.0 W3C Candidate Recommendation
+that will eventually replace this.
+It is currently implemented in Chrome, Firefox, and Safari, but not IE or Edge.
+
+In Chrome and Firefox the limit is based on the PWA origin rather than the API used.
+Data can be added to any of them until the browser quota is reached.
+Currently the Chrome storage quota for each domain is around 64GB.
+The total space currently being used can be checked using the Storage API.
+For example:
+
+```js
+navigator.storage.estimate().then(estimate => {
+  const {quota, usage} = estimate;
+  const percent = ((usage / quota) * 100).toFixed(1);
+  console.log(
+    `This app has used ${usage} bytes of its quota of ${quota} bytes (${percent}%).`
+  );
+});
+```
+
+In Safari ...
+
+REWORD THIS!
+
+Firefox: no limits, but will prompt after 50MB data stored. Mobile Safari: 50MB max, Desktop Safari: unlimited (prompts after 5MB), IE10+ maxes at 250MB and prompts at 10MB. PouchDB track IDB storage behavior. Future facing: For apps requiring more persistent storage, see the on-going work on Durable Storage.
+Safari 10 has fixed many long-standing IDB bugs in their latest Tech Previews. That said, some folks have run into stability issues with Safari 10’s IDB and PouchDB have found it to be a little slow. Until more research has been done here, YMMV. Please do test and file browser bugs so the folks @webkit and related OSS library authors can take a look. LocalForage, PouchDB, YDN and Lovefield use WebSQL in Safari by default due to UA sniffing (there wasn’t an efficient way to feature-test for broken IDB at the time). This means these libraries will work in Safari 10 without extra effort (just not using IDB directly).
+
+You are also responsible for periodically purging cache entries. Each browser has a hard limit on the amount of cache storage that a given origin can use. Cache quota usage estimates are available via the StorageEstimate API. The browser does its best to manage disk space, but it may delete the Cache storage for an origin. The browser will generally delete all of the data for an origin or none of the data for an origin. Make sure to version caches by name and use the caches only from the version of the script that they can safely operate on.
+
 ## Manifest File
 
 Service workers require a `manifest.json` file.
@@ -208,9 +371,10 @@ To see a list of all the cached files:
 - click the cache name
 
 To see the content of a cached file
-displayed by the steps above:
+displayed by the steps above, click its name.
 
-- click its name
+To delete a file from the cache,
+click its name and click the "X" above the list of files.
 
 To clear all the files that the service worker has cached:
 
@@ -361,4 +525,4 @@ Thanks to ? for reviewing this article!
 Tal Ater, 2017, O'Reilly
 
 Create React App - Making a Progressive Web App\
-https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+<https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app>

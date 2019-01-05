@@ -3,7 +3,7 @@ console.log('service-worker.js: entered at', Date.now());
 const cacheName = 'pwa-demo';
 
 const filesToCache = [
-  '/',
+  '/', // need in order to hit web app with domain only
   '/demo.css',
   '/index.html',
   '/index.js',
@@ -14,19 +14,14 @@ const filesToCache = [
 ];
 
 self.addEventListener('activate', event => {
-  const deleteCaches = async () => {
+  const deleteOldCaches = async () => {
     const keyList = await caches.keys();
     return Promise.all(
-      keyList.map(key => {
-        if (key !== cacheName) {
-          console.log('service-worker.js activate: removing cache for', key);
-          return caches.delete(key);
-        }
-        return null;
-      })
+      keyList.map(key => (key !== cacheName ? caches.delete(key) : null))
     );
   };
-  event.waitUntil(deleteCaches());
+  event.waitUntil(deleteOldCaches());
+
   return self.clients.claim();
 });
 
@@ -45,13 +40,7 @@ function supplyDemoCss(event) {
     body { color: red; font-family: sans-serif; }
     img { width: 60px; }
   `;
-  const options = {
-    headers: {
-      'Content-Type': 'text/css; charset=utf-8' //TODO: need charset?
-    },
-    status: 200,
-    statusText: 'OK'
-  };
+  const options = {headers: {'Content-Type': 'text/css'}};
   event.respondWith(new Response(content, options));
 }
 
@@ -77,11 +66,7 @@ self.addEventListener('fetch', event => {
   } else {
     // Use a cache-first strategy for files listed in filesToCache,
     // but sending an HTTP request for all others.
-    const getResource = () => {
-      const response = caches.match(request);
-      return response || fetch(request);
-    };
-    // This uses cached files.
+    const getResource = () => caches.match(request) || fetch(request);
     event.respondWith(getResource());
   }
 });
