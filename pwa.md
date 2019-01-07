@@ -88,6 +88,8 @@ on the next browser refresh is to open the devtools,
 select the "Application" tab, select "Service Workers",
 and click the "Unregister" link for the service worker.
 
+TODO: ADD SCREENSHOTS OF THE CHROME DEVTOOLS THROUGHOUT!
+
 Service workers can cache the files that are fetched from URLs.
 To see these in Chrome devtools, click the "Application" tab
 and open the "Cache Storage" section in the left nav.
@@ -96,6 +98,116 @@ During development it is desirable to reload the cached files
 when the browser is refreshed. To enable this in Chrome,
 open the devtools, click the "Application" tab,
 and check the "Update on reload" checkbox.
+
+## Use Case #1: Cache All Resources
+
+The simplest PWA use case is to cache all resources
+so that the application can be used when offline.
+We will get resources from the network when possible
+and only get them from the cache when that fails.
+
+Here is a service worker implementation that achieves this:
+
+```js
+const cacheName = 'pwa-demo';
+
+// No fetch events are generated in the initial load of the web app.
+// A second visit (or refresh) is required to cache all the resources.
+self.addEventListener('fetch', event => {
+  const {request} = event;
+
+  const getResource = async () => {
+    const {url} = request;
+    let resource;
+
+    try {
+      // Get from network.
+      // Note that resources coming from a local HTTP server
+      // can be fetched even when offline.
+      // To use cached versions of those, stop the local HTTP server.
+      resource = await fetch(request);
+      console.log('service worker got', url, 'from network');
+
+      // Save in cache for when we are offline later.
+      const cache = await caches.open(cacheName);
+      await cache.add(url);
+      console.log('service worker cached', url);
+    } catch (e) {
+      // Get from cache.
+      resource = await caches.match(request);
+      console.log('service worker got', url, 'from cache');
+    }
+
+    return resource;
+  };
+
+  event.respondWith(getResource());
+});
+```
+
+## Use Case #2: Cache For Startup Performance
+
+This use case is similar to the first, but rather than
+always try to get resources from the network first,
+we will check the cache first and only go to the network
+when resources are not found there.
+This will result in faster startup performance
+since network calls will be avoided.
+
+When resources are modified,
+we need a way to inform the service worker
+that they should be loaded over the network again.
+The easiest way to do this is to
+change the name of the cache being used.
+When the "activate" event is emitted,
+we can delete any caches whose names
+do not match the new name.
+
+Here is a service worker implementation that achieves this:
+
+```js
+const cacheName = 'pwa-demo';
+
+self.addEventListener('activate', event => {
+  const deleteOldCaches = async () => {
+    const keyList = await caches.keys();
+    return Promise.all(
+      keyList.map(key => (key !== cacheName ? caches.delete(key) : null))
+    );
+  };
+  event.waitUntil(deleteOldCaches());
+});
+
+// No fetch events are generated in the initial load of the web app.
+// A second visit is required to cache all the resources.
+self.addEventListener('fetch', event => {
+  const {request} = event;
+
+  const getResource = async () => {
+    const {url} = request;
+    let resource;
+
+    // Get from cache.
+    resource = await caches.match(request);
+    if (resource) {
+      console.log('service worker got', url, 'from cache');
+    } else {
+      // Get from network.
+      resource = await fetch(request);
+      console.log('service worker got', url, 'from network');
+
+      // Save in cache for when we are offline later.
+      const cache = await caches.open(cacheName);
+      await cache.add(url);
+      console.log('service worker cached', url);
+    }
+
+    return resource;
+  };
+
+  event.respondWith(getResource());
+});
+```
 
 ## Service Worker Activation
 
@@ -217,13 +329,16 @@ Otherwise the Fetch API is used to fetch it over the network.
 self.addEventListener('fetch', event => {
   const {request} = event;
   const getResource = () => caches.match(request) || fetch(request);
+  // This must be called synchronously,
+  // not after an "await" or in a "then" callback.
+  // Otherwise the browser will assume that the fetch event
+  // has already been handled by the time this is called.
   event.respondWith(getResource());
 });
 ```
 
-To retrieve the value for a given key in a `Cache` object, use the `?` method.
-
 To delete a `Cache` object, use the `delete` method.
+TODO: FINISH THIS!
 
 ADD DETAILS ON THE CacheStorage API!
 
@@ -389,13 +504,22 @@ devtools "Disable cache" checkbox on the "Network" tab
 is checked.
 
 In order to repeatedly test the process of registering a service worker,
-it is useful to unregister the current service worker.
+it is useful to stop the current service worker.
+
+To stop a service worker,
+
+- click "Application" tab
+- click "Service Workers" in left nav
+- locate the service worker with a status of "activated and is running"
+- click the "stop" link to the right of that status
+- the status will change to "activated and is stopped"
 
 To unregister a service worker and register it again:
 
 - click "Application" tab
 - click "Service Workers" in left nav
 - click "Unregister" link to right of the service worker
+- " - deleted" will be added after the name of the service worker
 - refresh browser window
 
 After a service worker has been unregistered in the devtools,
@@ -416,6 +540,9 @@ To simulate being offline, open the devtools and
 check the "Offline" checkbox on either the
 "Application" tab in "Service Workers"
 or the "Network" tab.
+Changing this in either one will also change the other.
+When offline, a warning icon will be displayed in the "Network" tab.
+![offline warning](images/offline-warning.png)
 
 To determine if online, check the boolean value of `navigator.onLine`.
 
