@@ -1,4 +1,4 @@
-const cacheName = 'pwa-demo-2';
+const cacheName = 'pwa-demo-v1';
 
 self.addEventListener('activate', event => {
   const deleteOldCaches = async () => {
@@ -24,14 +24,19 @@ self.addEventListener('fetch', event => {
     if (resource) {
       console.log('service worker got', url, 'from cache');
     } else {
-      // Get from network.
-      resource = await fetch(request);
-      console.log('service worker got', url, 'from network');
+      try {
+        // Get from network.
+        resource = await fetch(request);
+        console.log('service worker got', url, 'from network');
 
-      // Save in cache for when we are offline later.
-      const cache = await caches.open(cacheName);
-      await cache.add(url);
-      console.log('service worker cached', url);
+        // Save in cache for when we are offline later.
+        const cache = await caches.open(cacheName);
+        await cache.add(url);
+        console.log('service worker cached', url);
+      } catch (e) {
+        console.error('service worker failed to get', url);
+        resource = new Response('', {status: 404});
+      }
     }
 
     return resource;

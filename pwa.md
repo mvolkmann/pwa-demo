@@ -101,10 +101,13 @@ and check the "Update on reload" checkbox.
 
 ## Use Case #1: Cache All Resources
 
-The simplest PWA use case is to cache all resources
-so that the application can be used when offline.
+The simplest PWA use case is to cache all HTTP responses
+so the application can still be used when offline.
 We will get resources from the network when possible
 and only get them from the cache when that fails.
+
+This works for all HTTP requests including those that
+retrieve the contents of a file and REST/Ajax calls.
 
 Here is a service worker implementation that achieves this:
 
@@ -157,7 +160,9 @@ since network calls will be avoided.
 When resources are modified,
 we need a way to inform the service worker
 that they should be loaded over the network again.
-The easiest way to do this is to
+The easiest way to do this during development
+is to delete the cache from the devtools.
+For users, the easiest way to do this is to
 change the name of the cache being used.
 When the "activate" event is emitted,
 we can delete any caches whose names
@@ -166,7 +171,7 @@ do not match the new name.
 Here is a service worker implementation that achieves this:
 
 ```js
-const cacheName = 'pwa-demo';
+const cacheName = 'pwa-demo-v1';
 
 self.addEventListener('activate', event => {
   const deleteOldCaches = async () => {
@@ -192,14 +197,102 @@ self.addEventListener('fetch', event => {
     if (resource) {
       console.log('service worker got', url, 'from cache');
     } else {
-      // Get from network.
-      resource = await fetch(request);
-      console.log('service worker got', url, 'from network');
+      try {
+        // Get from network.
+        resource = await fetch(request);
+        console.log('service worker got', url, 'from network');
 
-      // Save in cache for when we are offline later.
-      const cache = await caches.open(cacheName);
-      await cache.add(url);
-      console.log('service worker cached', url);
+        // Save in cache for when we are offline later.
+        const cache = await caches.open(cacheName);
+        await cache.add(url);
+        console.log('service worker cached', url);
+      } catch (e) {
+        console.error('service worker failed to get', url);
+        resource = new Response('', {status: 404});
+      }
+    }
+
+    return resource;
+  };
+
+  event.respondWith(getResource());
+});
+```
+
+## Use Case #3: Cache Subset With Reduced Functionality
+
+For some web applications it is possible to define
+a subset of functionality that can be supported
+for offline use and only cache files related to that.
+
+For example, suppose an application allows users to
+upload a photo of themselves to be displayed on the site.
+When offline, a generic avatar can be displayed instead.
+
+```js
+const cacheName = 'pwa-demo-v1';
+
+const filesToCache = [
+  '/', // need in order to hit web app with domain only
+  '/demo.css',
+  '/demo.js',
+  '/images/avatar.jpg',
+  '/images/birthday-192.jpg'
+];
+
+self.addEventListener('activate', event => {
+  const deleteOldCaches = async () => {
+    const keyList = await caches.keys();
+    return Promise.all(
+      keyList.map(key => (key !== cacheName ? caches.delete(key) : null))
+    );
+  };
+  event.waitUntil(deleteOldCaches());
+});
+
+self.addEventListener('install', event => {
+  const cacheAll = async () => {
+    const cache = await caches.open(cacheName);
+    await cache.addAll(filesToCache);
+  };
+  event.waitUntil(cacheAll());
+});
+
+// No fetch events are generated in the initial load of the web app.
+// A second visit is required to cache all the resources.
+self.addEventListener('fetch', event => {
+  const {request} = event;
+
+  const getResource = async () => {
+    const {url} = request;
+    const isAvatar = url.includes('githubusercontent.com');
+    let resource;
+
+    // Get from cache.
+    resource = await caches.match(request);
+    if (resource) {
+      console.log('service worker got', url, 'from cache');
+    } else {
+      try {
+        // Get from network.
+        resource = await fetch(request);
+        console.log('service worker got', url, 'from network');
+
+        if (!isAvatar) {
+          // Save in cache for when we are offline later.
+          const cache = await caches.open(cacheName);
+          await cache.add(url);
+          console.log('service worker cached', url);
+        }
+      } catch (e) {
+        if (isAvatar) {
+          console.log('service worker using generic avatar');
+          resource = Response.redirect('/images/avatar.jpg');
+        } else {
+          console.error('service worker failed to get', url);
+          resource = new Response('', {status: 404});
+        }
+      }
     }
 
     return resource;
