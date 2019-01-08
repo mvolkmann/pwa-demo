@@ -1,6 +1,4 @@
-let addBtn;
-let numberInput;
-let totalDiv;
+let addBtn, numberInput, registration, totalDiv;
 
 // eslint-disable-next-line no-unused-vars
 async function addToTotal() {
@@ -16,8 +14,13 @@ async function addToTotal() {
 
 async function notify(message) {
   const permission = await Notification.requestPermission();
+
+  // Only works on desktop.
   // eslint-disable-next-line no-new
-  if (permission === 'granted') new Notification(message);
+  //if (permission === 'granted') new Notification(message);
+
+  // Also works on mobile.
+  if (permission === 'granted') registration.showNotification(message);
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -30,12 +33,22 @@ function numberChanged(event) {
   }
 }
 
-async function pwaSetup() {
+// eslint-disable-next-line no-unused-vars
+async function resetTotal() {
+  try {
+    await fetch('/total', {method: 'DELETE'});
+  } catch (e) {
+    // do nothing for now
+  }
+  totalDiv.textContent = 0;
+}
+
+async function serviceWorkerSetup() {
   if ('serviceWorker' in navigator) {
     try {
       // If the file "service-worker.js" is not found,
       // a service worker with a status of "is redundant" will be created.
-      const registration = await navigator.serviceWorker.register(
+      registration = await navigator.serviceWorker.register(
         '/service-worker.js'
       );
       console.info('service worker registered with scope', registration.scope);
@@ -56,16 +69,6 @@ async function pwaSetup() {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
-async function resetTotal() {
-  try {
-    await fetch('/total', {method: 'DELETE'});
-  } catch (e) {
-    // do nothing for now
-  }
-  totalDiv.textContent = 0;
-}
-
 async function updateTotal() {
   let total = 'offline';
 
@@ -82,7 +85,7 @@ async function updateTotal() {
 }
 
 window.onload = () => {
-  pwaSetup();
+  serviceWorkerSetup();
 
   addBtn = document.querySelector('#add-btn');
   numberInput = document.querySelector('#number');
