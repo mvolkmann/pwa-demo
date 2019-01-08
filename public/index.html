@@ -1,16 +1,30 @@
 <html>
   <head>
-    <script src="demo.js"></script>
     <link rel="stylesheet" href="demo.css" />
+    <script src="demo.js"></script>
   </head>
   <body>
-    This is my demo PWA!
+    This is my PWA demo!
 
     <img src="images/birthday-192.jpg" />
     <img src="https://avatars0.githubusercontent.com/u/79312?s=460&v=4" />
-    <!--img src="https://bad.url" /-->
 
-    <button onclick="loadList()">Load List</button>
-    <ul class="demo-list"></ul>
+    <div>
+      <label for="number">
+        Number
+        <input
+          id="number"
+          oninput="return numberChanged(event)"
+          type="number"
+        />
+      </label>
+    </div>
+    <div>
+      <button disabled id="add-btn" onclick="addToTotal()">Add</button>
+      <button onclick="resetTotal()">Reset</button>
+    </div>
+    <div>
+      <label for="total"> Total <span id="total"></span> </label>
+    </div>
   </body>
 </html>

@@ -1,25 +1,23 @@
-async function loadList() {
-  console.log('demo.js loadList: entered');
-  const res = await fetch('/list');
-  const data = await res.json();
-  console.log('demo.js makeRestCall: data =', data);
+let addBtn;
+let numberInput;
+let totalDiv;
 
-  const ul = document.querySelector('.demo-list');
-
-  // Remove all current child nodes of the list.
-  while (ul.hasChildNodes()) {
-    ul.removeChild(ul.firstChild);
+async function addToTotal() {
+  const number = numberInput.value;
+  try {
+    await fetch('/total', {method: 'POST', body: number});
+  } finally {
+    await updateTotal();
   }
+}
 
-  Object.keys(data)
-    .sort()
-    .forEach(key => {
-      const value = data[key];
-      const li = document.createElement('li');
-      const text = document.createTextNode(key + ' = ' + value);
-      li.appendChild(text);
-      ul.appendChild(li);
-    });
+function numberChanged(event) {
+  const disabled = event.target.value.length === 0;
+  if (disabled) {
+    addBtn.setAttribute('disabled', '');
+  } else {
+    addBtn.removeAttribute('disabled');
+  }
 }
 
 async function pwaSetup() {
@@ -30,13 +28,15 @@ async function pwaSetup() {
       const registration = await navigator.serviceWorker.register(
         '/service-worker.js'
       );
-      console.log('demo.js: service worker is registered');
-      console.log('demo.js: service worker scope is', registration.scope);
+      console.info(
+        'demo.js: service worker registered with scope',
+        registration.scope
+      );
 
       navigator.storage.estimate().then(estimate => {
         const {quota, usage} = estimate;
         const percent = ((usage / quota) * 100).toFixed(1);
-        console.log(`This app has ${percent}% of its storage quota.`);
+        console.info(`This app has ${percent}% of its storage quota.`);
       });
     } catch (e) {
       console.error('demo.js: service worker registration failed:', e);
@@ -44,4 +44,38 @@ async function pwaSetup() {
   }
 }
 
-pwaSetup();
+async function resetTotal() {
+  try {
+    await fetch('/total', {method: 'DELETE'});
+  } catch (e) {
+    // do nothing for now
+  }
+  totalDiv.textContent = 0;
+}
+
+async function updateTotal() {
+  let total = 'offline';
+
+  if (navigator.onLine) {
+    try {
+      const res = await fetch('/total');
+      total = await res.text();
+    } catch (e) {
+      // do nothing
+    }
+  }
+
+  totalDiv.textContent = total;
+}
+
+window.onload = () => {
+  pwaSetup();
+
+  addBtn = document.querySelector('#add-btn');
+  numberInput = document.querySelector('#number');
+  totalDiv = document.querySelector('#total');
+
+  updateTotal();
+  window.addEventListener('offline', updateTotal);
+  window.addEventListener('online', updateTotal);
+};

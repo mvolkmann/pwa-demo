@@ -1,3 +1,20 @@
+body > div {
+  margin-top: 10px;
+}
+
+button, input {
+  background-color: white;
+  border: solid lightgray 1px;
+  border-radius: 4px;
+  color: black;
+  padding: 4px;
+}
+
+button:disabled {
+  background-color: lightgray;
+  color: white;
+}
+
 img {
   display: block;
   margin-top: 10px;

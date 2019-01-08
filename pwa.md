@@ -228,6 +228,10 @@ for offline use and only cache files related to that.
 For example, suppose an application allows users to
 upload a photo of themselves to be displayed on the site.
 When offline, a generic avatar can be displayed instead.
+To keep things simple, we'll assume that the user photo
+always comes from a Github avatar which means
+the URL will contain "githubusercontent.com"
+and we don't want to cache these.
 
 ```js
 const cacheName = 'pwa-demo-v1';
@@ -301,6 +305,16 @@ self.addEventListener('fetch', event => {
   event.respondWith(getResource());
 });
 ```
+
+## Use Case #3: Delaying Transactions When Offline
+
+For some web applications it is acceptable
+to accumulate transactions when offline
+and execute them later when online again.
+
+To keep this example simple, we will just keep track of a numeric total.
+We can make REST calls to retrieve the current total (GET)
+and add a number to the total (POST).
 
 ## Service Worker Activation
 
