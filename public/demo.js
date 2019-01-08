@@ -2,15 +2,18 @@ let addBtn;
 let numberInput;
 let totalDiv;
 
+// eslint-disable-next-line no-unused-vars
 async function addToTotal() {
   const number = numberInput.value;
   try {
+    navigator.serviceWorker.controller.postMessage('page is adding ' + number);
     await fetch('/total', {method: 'POST', body: number});
   } finally {
     await updateTotal();
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function numberChanged(event) {
   const disabled = event.target.value.length === 0;
   if (disabled) {
@@ -41,9 +44,14 @@ async function pwaSetup() {
     } catch (e) {
       console.error('demo.js: service worker registration failed:', e);
     }
+
+    navigator.serviceWorker.addEventListener('message', event => {
+      console.log('page got message:', event.data);
+    });
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 async function resetTotal() {
   try {
     await fetch('/total', {method: 'DELETE'});

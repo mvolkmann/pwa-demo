@@ -1,4 +1,6 @@
+/*global getIdbUtil: false */
 self.importScripts('idb-util.js');
+const idbUtil = getIdbUtil('my-db', 'my-store');
 
 const cacheName = 'pwa-demo-v1';
 console.log('service-worker.js: cacheName =', cacheName);
@@ -11,21 +13,31 @@ const filesToCache = [
   '/images/birthday-192.jpg'
 ];
 
-const totalQueue = [];
-
 async function processTotalRequests() {
   if (!navigator.onLine) return;
 
-  while (totalQueue.length) {
+  const keys = await idbUtil.keys();
+  for (const key of keys) {
     try {
-      const [options] = totalQueue;
+      // eslint-disable-next-line no-await-in-loop
+      const options = await idbUtil.get(key);
+      console.log('service-worker.js processTotalRequests: options =', options);
       // eslint-disable-next-line no-await-in-loop
       await fetch('/total', options);
-      totalQueue.shift();
+      idbUtil.delete(key);
     } catch (e) {
       console.error('service-worker.js processTotalRequests: e =', e);
       break;
     }
+  }
+
+  if (keys.length) sendToClients('queued actions were processed');
+}
+
+async function sendToClients(message) {
+  const clients = await self.clients.matchAll();
+  for (const client of clients) {
+    client.postMessage(message);
   }
 }
 
@@ -68,7 +80,7 @@ self.addEventListener('fetch', event => {
       } else if (isTotal) {
         // Queue the request for processing when online again.
         if (request.method !== 'GET') {
-          totalQueue.push({method: request.method, body});
+          idbUtil.set(Date.now(), {method: request.method, body});
         }
         resource = new Response('0', {status: 503}); // Service Unavailable
       } else {
@@ -102,9 +114,12 @@ self.addEventListener('fetch', event => {
   event.respondWith(getResource());
 });
 
-async function idbSetup() {
-  const idbUtil = getIdbUtil('my-db', 'my-store');
+self.addEventListener('message', event => {
+  console.log('service worker got message:', event.data);
+});
 
+/*
+async function idbDemo() {
   await idbUtil.set('foo', 'apple');
   await idbUtil.clear();
   await idbUtil.set('bar', 'banana');
@@ -119,4 +134,5 @@ async function idbSetup() {
   console.log('service-worker.js idbSetup: keys =', keys);
 }
 
-idbSetup();
+idbDemo();
+*/

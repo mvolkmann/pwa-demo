@@ -12,6 +12,7 @@ self.importScripts('idb.js');
  * Don't use this if you need multiple operations
  * to be in the same transaction.
  */
+// eslint-disable-next-line no-unused-vars
 function getIdbUtil(dbName, storeName) {
   const dbPromise = idb.open(dbName, 1, upgradeDB => {
     upgradeDB.createObjectStore(storeName);
