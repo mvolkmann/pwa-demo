@@ -34,6 +34,9 @@ async function processTotalRequests() {
   if (keys.length) sendToClients('queued actions were processed');
 }
 
+/**
+ * The message can be any kind of JavaScript value.
+ */
 async function sendToClients(message) {
   const clients = await self.clients.matchAll();
   for (const client of clients) {

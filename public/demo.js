@@ -6,11 +6,18 @@ let totalDiv;
 async function addToTotal() {
   const number = numberInput.value;
   try {
+    // The message can be any kind of JavaScript value.
     navigator.serviceWorker.controller.postMessage('page is adding ' + number);
     await fetch('/total', {method: 'POST', body: number});
   } finally {
     await updateTotal();
   }
+}
+
+async function notify(message) {
+  const permission = await Notification.requestPermission();
+  // eslint-disable-next-line no-new
+  if (permission === 'granted') new Notification(message);
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -31,23 +38,21 @@ async function pwaSetup() {
       const registration = await navigator.serviceWorker.register(
         '/service-worker.js'
       );
-      console.info(
-        'demo.js: service worker registered with scope',
-        registration.scope
-      );
+      console.info('service worker registered with scope', registration.scope);
 
-      navigator.storage.estimate().then(estimate => {
-        const {quota, usage} = estimate;
-        const percent = ((usage / quota) * 100).toFixed(1);
-        console.info(`This app has ${percent}% of its storage quota.`);
-      });
+      const estimate = await navigator.storage.estimate();
+      const {quota, usage} = estimate;
+      const percent = ((usage / quota) * 100).toFixed(1);
+      console.info(`This app has ${percent}% of its storage quota.`);
     } catch (e) {
-      console.error('demo.js: service worker registration failed:', e);
+      console.error('service worker registration failed:', e);
     }
 
     navigator.serviceWorker.addEventListener('message', event => {
       console.log('page got message:', event.data);
     });
+
+    notify('service worker is ready');
   }
 }
 

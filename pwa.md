@@ -747,6 +747,12 @@ for testing offline operation of a PWA.
   click the "Network" tab, and check the "Offline" checkbox
   and I don't know why!
 
+## Notification API
+
+![notification permission](images/notification-permission.png)
+
+![notification](images/notification.png)
+
 ## Future
 
 ## Conclusion
