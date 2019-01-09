@@ -44,13 +44,12 @@ async function resetTotal() {
 }
 
 async function serviceWorkerSetup() {
-  if ('serviceWorker' in navigator) {
+  const {serviceWorker} = navigator;
+  if (serviceWorker) {
     try {
       // If the file "service-worker.js" is not found,
       // a service worker with a status of "is redundant" will be created.
-      registration = await navigator.serviceWorker.register(
-        '/service-worker.js'
-      );
+      registration = await serviceWorker.register('/service-worker.js');
       console.info('service worker registered with scope', registration.scope);
 
       const estimate = await navigator.storage.estimate();
@@ -61,7 +60,7 @@ async function serviceWorkerSetup() {
       console.error('service worker registration failed:', e);
     }
 
-    navigator.serviceWorker.addEventListener('message', event => {
+    serviceWorker.addEventListener('message', event => {
       console.log('page got message:', event.data);
     });
 

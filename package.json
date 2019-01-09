@@ -5,6 +5,7 @@
   "scripts": {
     "start": "nodemon src/server.js",
     "format": "prettier --write 'src/**/*.{js,scss}'",
+    "genkeys": "node src/generate-keys.js",
     "lint": "eslint --quiet src --ext .js"
   },
   "author": "R. Mark Volkmann <r.mark.volkmann@gmail.com> (https://mvolkmann.github.io/)",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^10.0.1",
-    "nodemon": "^1.18.9"
+    "nodemon": "^1.18.9",
+    "web-push": "^3.3.3"
   }
 }
